@@ -1,0 +1,24 @@
+{
+  "messages": [
+    {
+      "content": "Hy",
+      "role": "user"
+    },
+    {
+      "content": "How can I assist you today?",
+      "role": "assistant"
+    },
+    {
+      "content": "How to say hy in arabic",
+      "role": "user"
+    },
+    {
+      "content": "To say \"hy\" or \"hi\" in Arabic, the word is \"\u0645\u0631\u062d\u0628\u0627\" (marhaba). If you want to express a greeting of \"hi,\" you would say \"\u0645\u0631\u062d\u0628\u0627\" (marhaba) in response to someone who says hello.",
+      "role": "assistant"
+    },
+    {
+      "role": "user",
+      "content": "\u0648 \u0643\u064a\u0641 \u0627\u0642\u0648\u0644 \u0645\u0631\u062d\u0628\u0627 \u0628\u0643 \u064a\u0627 \u0635\u062f\u064a\u0642\u064a \u0628\u0627\u0644\u0641\u0631\u0646\u0633\u064a\u0629 \u0648 \u0627\u0644\u0627\u0646\u062c\u0644\u064a\u0632\u064a\u0629"
+    }
+  ]
+}

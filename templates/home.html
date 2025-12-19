@@ -384,6 +384,7 @@
             <p>Integrates Hugging Face models through local LLM server for real-time text generation.</p>
             <ul class="step-list">
                 <li>Connects to local LLM API (Ollama/LM Studio)</li>
+                <li>Model used for development: <strong>llama-3-8b-gpt-4o-ru1.0</strong> served via LM Studio on port <code>1234</code></li>
                 <li>Supports multi-turn conversations</li>
                 <li>Persists chat history in JSON format</li>
                 <li>Implements message save/load/delete functionality</li>
@@ -411,43 +412,51 @@
                 <i class="material-icons">cloud_upload</i>
                 Deployment Instructions
             </div>
+                        <h3>Prerequisites</h3>
+                        <ul class="step-list">
+                                <li>Docker and Docker Compose installed</li>
+                                <li>Python 3.10+ (for local development)</li>
+                                <li>No pre-built `model.pkl` required — `entrypoint.sh` génère le modèle si absent</li>
+                                <li>LLM service running on port 1234 (optional, for text generation)</li>
+                        </ul>
 
-            <h3>Prerequisites</h3>
-            <ul class="step-list">
-                <li>Docker and Docker Compose installed</li>
-                <li>Python 3.9+ (for local development)</li>
-                <li>Pre-trained model files (model.pkl for regression)</li>
-                <li>LLM service running on port 1234 (for text generation)</li>
-            </ul>
-
-            <h3>Quick Start - Docker Deployment</h3>
-            <div class="code-block">
+                        <h3>Quick Start - Docker (single container)</h3>
+                        <div class="code-block">
 # Build Docker image
-docker build -t aiops-flask-app .
+docker build -t flask-ml-app .
 
-# Run container with volume mounting
-docker run -p 7000:7000 \
-  -v $(pwd)/images:/app/images \
-  -v $(pwd)/data:/app/data \
-  --name aiops-app \
-  aiops-flask-app
-            </div>
+# Run container with volume mounting (Windows PowerShell example)
+docker run -p 5000:5000 \
+    -v %CD%/images:/app/images \
+    -v %CD%/data:/app/data \
+    --name flask-ml-app \
+    flask-ml-app
 
-            <h3>Using Docker Compose (Recommended)</h3>
-            <div class="code-block">
-# Start all services
-docker-compose up -d
+# Linux/macOS example (use $PWD instead of %CD%)
+docker run -p 5000:5000 -v $(pwd)/images:/app/images -v $(pwd)/data:/app/data --name flask-ml-app flask-ml-app
+                        </div>
 
-# View logs
-docker-compose logs -f aiops-app
+                        <h3>Using Docker Compose (Recommended)</h3>
+                        <div class="code-block">
+# Build and start services (foreground)
+docker-compose up --build
 
-# Stop services
+# Start in detached mode
+docker-compose up -d --build
+
+# View logs for the Flask service
+docker-compose logs -f flask-app
+
+# Stop and remove containers
 docker-compose down
-            </div>
+                        </div>
 
-            <h3>Dockerfile</h3>
-            <div class="code-block">
-FROM python:3.9-slim
+                        <h3>Dockerfile (notes)</h3>
+                        <div class="code-block">
+# The project provides a Dockerfile that installs dependencies,
+# copies the app, and uses `entrypoint.sh` to run `model.py` if needed
+# then starts Flask on port 5000 (see repo Dockerfile for full content).
+FROM python:3.10-slim
 
 WORKDIR /app
 
@@ -455,81 +464,88 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
+COPY entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
 
-EXPOSE 7000
+EXPOSE 5000
 
-CMD ["python", "main.py"]
-            </div>
+ENV FLASK_APP=main.py
+ENV FLASK_ENV=production
 
-            <h3>Docker Compose Configuration</h3>
-            <div class="code-block">
+CMD ["/app/entrypoint.sh"]
+                        </div>
+
+                        <h3>Docker Compose Configuration (key parts)</h3>
+                        <div class="code-block">
 version: '3.8'
 
 services:
-  aiops-app:
-    build: .
-    ports:
-      - "7000:7000"
-    volumes:
-      - ./images:/app/images
-      - ./data:/app/data
-    environment:
-      - FLASK_ENV=production
-      - FLASK_SECRET=your-secret-key
-    restart: always
-            </div>
+    flask-app:
+        build: .
+        container_name: flask-ml-app
+        ports:
+            - "5000:5000"
+        volumes:
+            - ./images:/app/images
+            - ./data:/app/data
+        environment:
+            - FLASK_APP=main.py
+            - FLASK_ENV=production
+            - FLASK_SECRET=your-secret-key-here
+        restart: unless-stopped
+                        </div>
 
-            <h3>Local Development Setup</h3>
-            <div class="code-block">
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+                        <h3>Local Development Setup</h3>
+                        <div class="code-block">
+# Create virtual environment (Windows PowerShell)
+python -m venv .venv
+.venv\Scripts\activate
 
 # Install dependencies
 pip install -r requirements.txt
 
-# Run application
-python main.py
+# (Optional) Generate model.pkl locally
+python model.py
 
-# Access at http://localhost:7000
-            </div>
+# Run Flask (development)
+flask run --host=0.0.0.0
 
-            <h3>Required dependencies (requirements.txt)</h3>
-            <div class="code-block">
-Flask==2.3.0
+# Access at http://localhost:5000
+                        </div>
+
+                        <h3>Required dependencies (requirements.txt)</h3>
+                        <div class="code-block">
+Flask==2.3.3
 Flask-CORS==4.0.0
-Keras==2.13.0
+Keras==2.13.1
 TensorFlow==2.13.0
-Werkzeug==2.3.0
-requests==2.31.0
-numpy==1.24.0
+numpy==1.24.3
+pandas==2.0.3
 scikit-learn==1.3.0
-            </div>
+matplotlib==3.7.2
+Werkzeug==2.3.7
+                        </div>
 
-            <h3>Full Automated Deployment Commands</h3>
-            <div class="code-block">
-# Step 1: Clone or prepare project
-cd /path/to/project
+                        <h3>Notes</h3>
+                        <div class="code-block">
+# The project includes `entrypoint.sh` which:
+#  - runs `python model.py` to produce `model.pkl` if it does not exist
+#  - then starts Flask via `flask run --host=0.0.0.0`
 
-# Step 2: Build Docker image
-docker build -t aiops-flask-app:latest .
+# Uploaded files persist on the host under ./images because of the volume
+# defined in `docker-compose.yml` and in `docker run` examples above.
 
-# Step 3: Create volumes and directories
-mkdir -p images data
+# If you need a smaller image, we can optimize the Dockerfile (slim base,
+# multi-stage builds, or use prebuilt TensorFlow wheels for your platform).
+                        </div>
+                        <h3>GitHub Repository</h3>
+                        <div class="code-block">
+# Link local repo to GitHub
+git remote add origin https://github.com/oussamaelfaqyr/ds-devoir-part1.git
 
-# Step 4: Deploy with Docker Compose
-docker-compose up -d
-
-# Step 5: Verify deployment
-docker ps
-curl http://localhost:7000/home
-
-# Step 6: View application logs
-docker-compose logs -f aiops-app
-
-# Step 7: Scale if needed
-docker-compose up -d --scale aiops-app=3
-            </div>
+# Push initial commit (if needed)
+git push -u origin main
+                        </div>
         </div>
 
         <!-- Project Structure -->
