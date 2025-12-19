@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  flask-app:
+    build: .
+    container_name: flask-ml-app
+    ports:
+      - "5000:5000"
+    volumes:
+      # Volume pour persister les images téléchargées
+      - ./images:/app/images
+      # Volume pour persister les données
+      - ./data:/app/data
+    environment:
+      - FLASK_APP=main.py
+      - FLASK_ENV=production
+      - FLASK_SECRET=your-secret-key-here
+    restart: unless-stopped
+    # Optionnel : limiter les ressources
+    # resources:
+    #   limits:
+    #     cpus: '1'
+    #     memory: 2G

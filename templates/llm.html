@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ChatGPT — Local</title>
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
+  <style>
+    :root{
+      --sidebar:#202123;
+      --bg:#0b0b0b;
+      --panel:#111214;
+      --muted:#a6a6a6;
+      --accent:#10a37f;
+      --user:#1a73e8;
+      --msg-bg:#202124;
+    }
+    html,body{height:100%;margin:0;font-family:Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial}
+    body{background:linear-gradient(180deg,#0b0b0b 0%, #0f0f0f 100%);color:#e6e6e6;display:flex}
+    /* Sidebar */
+    .sidebar{width:260px;background:var(--sidebar);display:flex;flex-direction:column;padding:16px;box-sizing:border-box}
+    .brand{display:flex;align-items:center;gap:10px;color:white;font-weight:600;margin-bottom:18px}
+    .brand .logo{width:34px;height:34px;border-radius:8px;background:linear-gradient(135deg,#10a37f,#4bd6c5);display:flex;align-items:center;justify-content:center;color:white;font-weight:700}
+    .nav{flex:1;margin-top:6px}
+    .nav button{width:100%;padding:10px;border-radius:8px;border:none;background:transparent;color:inherit;text-align:left;margin-bottom:8px;cursor:pointer}
+    .nav button:hover{background:#2a2a2b}
+    .new-chat{display:flex;gap:8px;align-items:center;padding:10px;background:#2b2b2c;border-radius:8px;border:none;color:white;cursor:pointer;margin-bottom:8px}
+    /* Main */
+    .main{flex:1;display:flex;flex-direction:column;height:100vh}
+    .main-header{height:64px;display:flex;align-items:center;padding:0 20px;background:transparent;border-bottom:1px solid rgba(255,255,255,0.03)}
+    .conversation{flex:1;overflow:auto;padding:24px;display:flex;flex-direction:column;gap:12px}
+    .system-note{max-width:720px;margin:0 auto;text-align:center;color:var(--muted);font-size:13px}
+    /* Messages */
+    .messages{max-width:700px;margin:0 auto;display:flex;flex-direction:column;gap:12px;width:100%}
+    .msg{display:flex;gap:12px;align-items:flex-start}
+    .msg .delete-btn{background:transparent;border:none;color:var(--muted);cursor:pointer;padding:6px;border-radius:6px}
+    .msg .delete-btn:hover{color:#ff7b7b}
+    .avatar{width:36px;height:36px;border-radius:6px;background:#2a2a2b;display:flex;align-items:center;justify-content:center;color:var(--muted);font-weight:700}
+    .bubble{padding:14px 16px;border-radius:12px;background:var(--msg-bg);color:#e6e6e6;white-space:pre-wrap;line-height:1.5;max-width:100%}
+    .msg.thinking .bubble{opacity:0.9;font-style:italic;color:var(--muted);background:linear-gradient(90deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01))}
+    .msg.user{flex-direction:row-reverse}
+    .msg.user .bubble{background:linear-gradient(90deg,#0ea5a4,#10b981);color:white}
+    .msg.user .avatar{background:linear-gradient(90deg,#0ea5a4,#10b981)}
+    .msg.user .avatar .material-symbols-outlined{color:white}
+    /* Input area */
+    .composer{padding:16px;background:transparent;border-top:1px solid rgba(255,255,255,0.03)}
+    .composer-inner{max-width:900px;margin:0 auto;display:flex;gap:12px;align-items:flex-end}
+    textarea#user-input{flex:1;min-height:44px;max-height:240px;padding:12px 14px;border-radius:12px;border:1px solid rgba(255,255,255,0.06);background:#0f0f10;color:white;resize:none;outline:none;font-size:14px}
+    .controls{display:flex;gap:8px}
+    .icon-btn{background:#2a2a2b;border:none;padding:10px;border-radius:8px;color:var(--muted);cursor:pointer}
+    .send-btn{background:linear-gradient(90deg,#10a37f,#4bd6c5);border:none;color:black;padding:10px 14px;border-radius:8px;cursor:pointer;font-weight:600}
+    .material-symbols-outlined{font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24;vertical-align:middle}
+    .icon-btn .material-symbols-outlined{font-size:18px}
+    .send-btn .material-symbols-outlined{font-size:16px;margin-right:8px}
+    .avatar .material-symbols-outlined{font-size:14px;color:var(--muted)}
+    /* Toast */
+    #toast-container{position:fixed;bottom:24px;right:24px;z-index:9999;display:flex;flex-direction:column;gap:8px}
+    .toast{background:#333;color:#e6e6e6;padding:12px 16px;border-radius:8px;border-left:4px solid #10a37f;box-shadow:0 4px 12px rgba(0,0,0,0.3);animation:slideIn 0.3s ease-out}
+    .toast.success{border-left-color:#10b981}
+    .toast.error{border-left-color:#ff7b7b}
+    .toast.info{border-left-color:#3b82f6}
+    @keyframes slideIn{from{opacity:0;transform:translateX(100%);}to{opacity:1;transform:translateX(0)}}
+    @keyframes slideOut{from{opacity:1;transform:translateX(0);}to{opacity:0;transform:translateX(100%)}}
+    .toast.hide{animation:slideOut 0.3s ease-out forwards}
+    /* Responsive */
+    @media (max-width:880px){.sidebar{display:none}.main{margin-left:0}}
+  </style>
+</head>
+<body>
+  <div class="sidebar">
+    <div class="brand"><div class="logo">GPT</div><div>ChatGPT</div></div>
+    <button class="new-chat">+ New chat</button>
+    <div class="nav">
+      <button>Examples</button>
+      <button>Settings</button>
+    </div>
+    <div style="font-size:12px;color:var(--muted);margin-top:auto">Local instance — messages stored in browser</div>
+  </div>
+
+  <div id="toast-container"></div>
+
+  <div class="main">
+    <div class="main-header"><div style="font-weight:600">ChatGPT</div></div>
+    <div class="conversation">
+      <div class="system-note">Responses are generated locally. This UI mirrors ChatGPT styling.</div>
+      <div id="chat-container" class="messages"></div>
+    </div>
+
+    <div class="composer">
+      <form id="input-form" style="display:flex;align-items:flex-end;">
+        <div class="composer-inner" style="width:100%">
+          <textarea id="user-input" placeholder="Send a message..." autocomplete="off"></textarea>
+          <div class="controls">
+            <button type="button" class="icon-btn" id="attach" title="Attach"><span class="material-symbols-outlined">attach_file</span></button>
+            <button type="submit" class="send-btn" title="Send"><span class="material-symbols-outlined">send</span>Send</button>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const chatContainer = document.getElementById('chat-container');
+    const inputForm = document.getElementById('input-form');
+    const userInput = document.getElementById('user-input');
+
+    let chatHistory = JSON.parse(localStorage.getItem('chatHistory') || '[]');
+    let currentChatId = localStorage.getItem('chatId');
+
+    function showToast(message, type = 'info', duration = 3000){
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.textContent = message;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.classList.add('hide');
+        setTimeout(() => toast.remove(), 300);
+      }, duration);
+    }
+
+    async function ensureChat(){
+      // if no chat id, create one; otherwise try to load server copy
+      if(!currentChatId){
+        try{
+          const res = await fetch('/api/new_chat', {method:'POST'});
+          const data = await res.json();
+          currentChatId = data.chat_id;
+          localStorage.setItem('chatId', currentChatId);
+          await saveChat();
+        }catch(e){
+          console.warn('Could not create chat on server', e);
+        }
+      }else{
+        try{
+          const res = await fetch('/api/load', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chat_id:currentChatId})});
+          if(res.ok){
+            const data = await res.json();
+            if(Array.isArray(data.messages)){
+              chatHistory = data.messages;
+              localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
+            }
+          }
+        }catch(e){
+          console.warn('Could not load chat from server', e);
+        }
+      }
+    }
+
+    function createMessageNode(msg, index){
+      const wrapper = document.createElement('div');
+      wrapper.className = 'msg ' + (msg.role === 'user' ? 'user' : 'assistant');
+
+      const avatar = document.createElement('div');
+      avatar.className = 'avatar';
+      avatar.innerHTML = msg.role === 'user'
+        ? '<span class="material-symbols-outlined">account_circle</span>'
+        : '<span class="material-symbols-outlined">smart_toy</span>';
+
+      const bubble = document.createElement('div');
+      bubble.className = 'bubble';
+      bubble.innerHTML = renderMessageHtml(msg.content || '');
+
+      // delete button
+      const delBtn = document.createElement('button');
+      delBtn.className = 'delete-btn';
+      delBtn.title = 'Delete message';
+      delBtn.innerHTML = '<span class="material-symbols-outlined">delete</span>';
+      delBtn.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        deleteMessage(index);
+      });
+
+      wrapper.appendChild(avatar);
+      wrapper.appendChild(bubble);
+      wrapper.appendChild(delBtn);
+      return wrapper;
+    }
+
+    // Thinking indicator (not stored in chatHistory)
+    let thinkingNode = null;
+    let thinkingInterval = null;
+    function showThinking(){
+      if(thinkingNode) return;
+      thinkingNode = document.createElement('div');
+      thinkingNode.className = 'msg assistant thinking';
+
+      const avatar = document.createElement('div');
+      avatar.className = 'avatar';
+      avatar.innerHTML = '<span class="material-symbols-outlined">smart_toy</span>';
+
+      const bubble = document.createElement('div');
+      bubble.className = 'bubble';
+      bubble.innerText = '';
+
+      thinkingNode.appendChild(avatar);
+      thinkingNode.appendChild(bubble);
+      chatContainer.appendChild(thinkingNode);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+
+      let dots = 0;
+      thinkingInterval = setInterval(()=>{
+        dots = (dots + 1) % 4;
+        bubble.innerText = '.'.repeat(dots);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+      }, 350);
+    }
+
+    function hideThinking(){
+      if(thinkingInterval) { clearInterval(thinkingInterval); thinkingInterval = null; }
+      if(thinkingNode){ thinkingNode.remove(); thinkingNode = null; }
+    }
+
+    // Extended, safe markdown-like renderer: escapes HTML, supports code blocks, `inline code`, **bold**, *italics*, numbered and bulleted lists, links and blockquotes
+    function escapeHtml(str){
+      return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+    }
+
+    function renderMessageHtml(raw){
+      if(!raw) return '';
+      // Extract fenced code blocks first to avoid processing inner markdown
+      const codeBlocks = [];
+      let text = String(raw).replace(/```([\s\S]*?)```/g, (m, p1)=>{
+        codeBlocks.push(p1);
+        return `@@CODEBLOCK${codeBlocks.length-1}@@`;
+      });
+
+      // escape the rest
+      text = escapeHtml(text);
+
+      // inline code `code`
+      text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
+      // bold **text**
+      text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      // italics *text* or _text_
+      text = text.replace(/(?<!\*)\*(?!\*)(.+?)\*(?!\*)/g, '<em>$1</em>');
+      text = text.replace(/_(.+?)_/g, '<em>$1</em>');
+      // links [text](url)
+      text = text.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+
+      // Split into paragraph blocks by blank lines
+      const blocks = text.split(/\n\n+/);
+      let out = blocks.map(block => {
+        const lines = block.split(/\n/);
+        // numbered list
+        if(lines.every(l => /^\s*\d+\.\s+/.test(l))){
+          const items = lines.map(l => '<li>'+ l.replace(/^\s*\d+\.\s+/, '') +'</li>').join('');
+          return '<ol>'+items+'</ol>';
+        }
+        // unordered list
+        if(lines.every(l => /^\s*[-*+]\s+/.test(l))){
+          const items = lines.map(l => '<li>'+ l.replace(/^\s*[-*+]\s+/, '') +'</li>').join('');
+          return '<ul>'+items+'</ul>';
+        }
+        // blockquote
+        if(lines.every(l => /^\s*>/.test(l))){
+          const content = lines.map(l => l.replace(/^\s*>\s?/, '')).join('<br>');
+          return '<blockquote>'+content+'</blockquote>';
+        }
+        // otherwise preserve line breaks
+        return lines.join('<br>');
+      }).join('\n');
+
+      // Restore code blocks (escaped inside)
+      out = out.replace(/@@CODEBLOCK(\d+)@@/g, (m, idx) => {
+        const code = codeBlocks[Number(idx)] || '';
+        return '<pre><code>'+ escapeHtml(code) +'</code></pre>';
+      });
+
+      return out;
+    }
+
+    function renderMessages(){
+      chatContainer.innerHTML = '';
+      chatHistory.forEach((m,i)=> chatContainer.appendChild(createMessageNode(m,i)));
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    async function saveChat(){
+      if(!currentChatId) return;
+      try{
+        await fetch('/api/save',{
+          method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chat_id:currentChatId,messages:chatHistory})
+        });
+        showToast('Chat saved', 'success', 2000);
+      }catch(e){
+        console.warn('Failed to save chat', e);
+        showToast('Failed to save chat', 'error', 3000);
+      }
+    }
+
+    async function createNewChat(){
+      try{
+        const res = await fetch('/api/new_chat', {method:'POST'});
+        const data = await res.json();
+        currentChatId = data.chat_id;
+        chatHistory = [];
+        localStorage.setItem('chatId', currentChatId);
+        localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
+        await saveChat();
+        renderMessages();
+        showToast('New chat started', 'success', 2000);
+      }catch(e){
+        console.error('Failed to create new chat', e);
+        showToast('Failed to create new chat', 'error', 3000);
+      }
+    }
+
+    async function deleteMessage(index){
+      if(!currentChatId){
+        // fallback: delete locally
+        chatHistory.splice(index,1);
+        localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
+        renderMessages();
+        showToast('Message deleted', 'success', 2000);
+        return;
+      }
+      try{
+        const res = await fetch('/api/delete_message',{
+          method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({chat_id:currentChatId,index:index})
+        });
+        const data = await res.json();
+        if(res.ok && data.messages){
+          chatHistory = data.messages;
+          localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
+          renderMessages();
+          showToast('Message deleted', 'success', 2000);
+        }else{
+          console.warn('Delete failed', data);
+          showToast('Failed to delete message', 'error', 3000);
+        }
+      }catch(e){
+        console.error('Error deleting message', e);
+        showToast('Error deleting message', 'error', 3000);
+      }
+    }
+
+    // wire new chat button
+    document.querySelector('.new-chat').addEventListener('click', (e)=>{
+      e.preventDefault();
+      createNewChat();
+    });
+
+    // ensure chat exists on load
+    ensureChat().then(renderMessages);
+
+    async function sendMessage(text){
+      await ensureChat();
+      chatHistory.push({role:'user',content:text});
+      renderMessages();
+      localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
+      await saveChat();
+
+      try{
+        showThinking();
+        const res = await fetch('/api/chat',{
+          method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:chatHistory})
+        });
+
+        // If server returned non-200, show a toast with status and body
+        if(!res.ok){
+          let bodyText = '';
+          try{ bodyText = await res.text(); }catch(e){}
+          hideThinking();
+          showToast(`Server error ${res.status}: ${bodyText || res.statusText}`, 'error', 5000);
+          return;
+        }
+
+        const data = await res.json();
+        hideThinking();
+
+        if(data.error){
+          // backend reported an error; show it but don't insert a generic assistant error message
+          showToast(`Model error: ${data.error}`, 'error', 5000);
+          return;
+        }
+
+        const assistantMsg = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content) || data.answer;
+        if(!assistantMsg){
+          showToast('No assistant content returned', 'info', 3000);
+          return;
+        }
+
+        chatHistory.push({role:'assistant',content:assistantMsg});
+        renderMessages();
+        localStorage.setItem('chatHistory', JSON.stringify(chatHistory));
+        await saveChat();
+      }catch(err){
+        console.error(err);
+        hideThinking();
+        showToast('Network error: Unable to reach server', 'error', 4000);
+      }
+    }
+
+    inputForm.addEventListener('submit',(e)=>{
+      e.preventDefault();
+      const text = userInput.value.trim();
+      if(!text) return;
+      userInput.value='';
+      sendMessage(text);
+    });
+
+    // allow Enter to send, Shift+Enter for newline
+    userInput.addEventListener('keydown',(e)=>{
+      if(e.key === 'Enter' && !e.shiftKey){
+        e.preventDefault();
+        inputForm.requestSubmit();
+      }
+    });
+
+    renderMessages();
+  </script>
+</body>
+</html>
