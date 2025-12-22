@@ -1,5 +1,10 @@
 # Projet Flask + ML — Conteneurisation
 
+## Team members:
+
+>OUSSAMA ELFAQYR
+>AYOUB MOUROU
+
 Ce dépôt contient une application Flask qui réalise :
 - classification d'images avec VGG16
 - prédiction par régression (modèle sauvegardé dans `model.pkl`)
